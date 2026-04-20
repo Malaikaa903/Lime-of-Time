@@ -1,0 +1,6 @@
+node_modules/
+config.env
+.env
+public/img/users/*
+public/img/services/*
+public/img/businesses/*
