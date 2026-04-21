@@ -147,16 +147,23 @@ exports.login = catchAsync(async (req, res, next) => {
     return next(new AppError("Please provide email and password", 400));
   }
 
-  const user = await User.findOne({ email }).select("+password");
+  const user = await User.findOne({ email }).select("+password +isActive");
 
-  if (!user || !(await user.correctPassword(password, user.password))) {
+  if (!user) {
     return next(new AppError("Incorrect email or password", 401));
+  }
+
+  if (!user.isActive) {
+    return next(new AppError("This account has been deactivated", 401));
+  }
+
+  if (!(await user.correctPassword(password, user.password))) {
+    return next(new AppError("This account has been deactivated", 401));
   }
 
   if (!user.isVerified) {
     return next(new AppError("Please verify your account first", 401));
   }
-
   const token = signToken(user._id);
 
   user.password = undefined;
@@ -190,10 +197,15 @@ exports.protect = catchAsync(async (req, res, next) => {
 
   const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
-  const currentUser = await User.findById(decoded.id);
+  const currentUser = await User.findById(decoded.id).select("+isActive");
 
   if (!currentUser) {
     return next(new AppError("User no longer exists", 401));
+  }
+
+  // Block deactivated accounts
+  if (!currentUser.isActive) {
+    return next(new AppError("This account has been deactivated", 401));
   }
 
   req.user = currentUser;
