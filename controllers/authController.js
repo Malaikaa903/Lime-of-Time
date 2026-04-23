@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { promisify } = require("util");
 
@@ -158,7 +159,7 @@ exports.login = catchAsync(async (req, res, next) => {
   }
 
   if (!(await user.correctPassword(password, user.password))) {
-    return next(new AppError("This account has been deactivated", 401));
+    return next(new AppError("Incorrect email or password", 401));
   }
 
   if (!user.isVerified) {
@@ -180,6 +181,15 @@ exports.login = catchAsync(async (req, res, next) => {
   });
 });
 
+//Logout
+exports.logout = catchAsync(async (req, res, next) => {
+  res.status(200).json({
+    success: true,
+    message: "Logged out successfully",
+    token: null,
+  });
+});
+
 //  PROTECT ROUTES
 exports.protect = catchAsync(async (req, res, next) => {
   let token;
@@ -197,7 +207,9 @@ exports.protect = catchAsync(async (req, res, next) => {
 
   const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
-  const currentUser = await User.findById(decoded.id).select("+isActive");
+  const currentUser = await User.findById(decoded.id).select(
+    "+isActive +passwordChangedAt",
+  );
 
   if (!currentUser) {
     return next(new AppError("User no longer exists", 401));
@@ -206,6 +218,12 @@ exports.protect = catchAsync(async (req, res, next) => {
   // Block deactivated accounts
   if (!currentUser.isActive) {
     return next(new AppError("This account has been deactivated", 401));
+  }
+
+  if (currentUser.changedPasswordAfter(decoded.iat)) {
+    return next(
+      new AppError("Password recently changed! Please login again", 401),
+    );
   }
 
   req.user = currentUser;
@@ -221,3 +239,155 @@ exports.restrictTo = (...roles) => {
     next();
   };
 };
+
+//Forgot password
+exports.forgotPassword = catchAsync(async (req, res, next) => {
+  const user = await User.findOne({ email: req.body.email });
+
+  if (!user) {
+    return next(new AppError("No user found with this email", 404));
+  }
+
+  const resetToken = user.createPasswordResetToken();
+  await user.save({ validateBeforeSave: false });
+
+  const message = `Forgot your password? Your reset OTP/token is: ${resetToken}. 
+  It expires in 10 minutes. If you didn't request this, ignore this email.`;
+
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: "Your Password Reset Token (valid for 10 minutes)",
+      message,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Reset token sent to email",
+    });
+  } catch (err) {
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    return next(new AppError("Failed to send email. Try again later.", 500));
+  }
+});
+
+//reset password
+exports.resetPassword = catchAsync(async (req, res, next) => {
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(req.params.token)
+    .digest("hex");
+
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return next(new AppError("Token is invalid or has expired", 400));
+  }
+
+  user.password = req.body.password;
+  user.passwordConfirm = req.body.passwordConfirm;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+
+  await user.save();
+
+  const token = signToken(user._id);
+
+  res.status(200).json({
+    success: true,
+    message: "Password reset successfully",
+    token,
+  });
+});
+
+//update current password
+exports.updatePassword = catchAsync(async (req, res, next) => {
+  const { currentPassword, newPassword, newPasswordConfirm } = req.body;
+
+  const user = await User.findById(req.user.id).select("+password");
+
+  if (!(await user.correctPassword(currentPassword, user.password))) {
+    return next(new AppError("Your current password is wrong", 401));
+  }
+
+  user.password = newPassword;
+  user.passwordConfirm = newPasswordConfirm;
+  await user.save();
+  const token = signToken(user._id);
+
+  res.status(200).json({
+    success: true,
+    message: "Password updated successfully",
+    token,
+  });
+});
+
+//Delete Account Otp
+exports.requestDeleteAccount = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.user.id);
+
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+
+  const otp = generateOTP();
+  user.otp = otp;
+  user.otpExpires = Date.now() + 10 * 60 * 1000;
+  await user.save({ validateBeforeSave: false });
+
+  const message = `You requested to delete your Lime of Time account. 
+Your confirmation OTP is: ${otp}. It expires in 10 minutes.
+If you did not request this, please ignore this email.`;
+
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: "Account Deletion Confirmation OTP",
+      message,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Deletion OTP sent to your email",
+    });
+  } catch (err) {
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+    return next(new AppError("Failed to send OTP. Try again later.", 500));
+  }
+});
+
+// Del Account OTP verification
+exports.confirmDeleteAccount = catchAsync(async (req, res, next) => {
+  const { otp } = req.body;
+
+  const user = await User.findById(req.user.id).select("+otp +otpExpires");
+
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+
+  // Verify OTP
+  if (user.otp !== Number(otp) || user.otpExpires < Date.now()) {
+    return next(new AppError("Invalid or expired OTP", 400));
+  }
+
+  // Deactivate account
+  user.isActive = false;
+  user.otp = undefined;
+  user.otpExpires = undefined;
+  await user.save({ validateBeforeSave: false });
+
+  res.status(200).json({
+    success: true,
+    message: "Account deleted successfully",
+    token: null,
+  });
+});

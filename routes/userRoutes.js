@@ -15,7 +15,6 @@ router.post(
 
 router.get("/me", userController.getMe);
 router.patch("/update-me", uploadUserPhoto, userController.updateMe);
-router.delete("/delete-me", userController.deleteMe);
 router.patch("/toggle-notifications", userController.toggleNotifications);
 
 module.exports = router;

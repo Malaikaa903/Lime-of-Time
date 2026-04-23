@@ -86,6 +86,41 @@ const businessSchema = new mongoose.Schema(
       default: [],
     },
 
+    paymentAccount: {
+      bankName: {
+        type: String,
+        default: null,
+      },
+      accountTitle: {
+        type: String,
+        default: null,
+      },
+      accountNumber: {
+        type: String,
+        default: null,
+      },
+      iban: {
+        type: String,
+        default: null,
+      },
+      branchName: {
+        type: String,
+        default: null,
+      },
+      acceptsFullPayment: {
+        type: Boolean,
+        default: true,
+      },
+      acceptsPartialPayment: {
+        type: Boolean,
+        default: false,
+      },
+      acceptsCash: {
+        type: Boolean,
+        default: false,
+      },
+    },
+
     rating: {
       type: Number,
       default: 0,

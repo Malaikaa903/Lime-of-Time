@@ -80,17 +80,6 @@ exports.updateMe = catchAsync(async (req, res, next) => {
   });
 });
 
-// Delete (deactivate) account
-exports.deleteMe = catchAsync(async (req, res, next) => {
-  await User.findByIdAndUpdate(req.user.id, { isActive: false });
-
-  res.status(200).json({
-    success: true,
-    status: 200,
-    message: "Account deleted successfully",
-  });
-});
-
 // Notifications toggle
 exports.toggleNotifications = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.user.id);

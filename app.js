@@ -4,6 +4,7 @@ const path = require("path");
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
+const businessRoutes = require("./routes/businessRoutes");
 const globalErrorHandler = require("./utils/globalErrorHandler");
 
 const app = express();
@@ -21,8 +22,6 @@ app.get("/", (req, res) => {
 });
 
 // ROUTES
-
-// app.use("/api/businesses", businessRoutes);
 // app.use("/api/staff", staffRoutes);
 // app.use("/api/services", serviceRoutes);
 // app.use("/api/appointments", appointmentRoutes);
@@ -34,6 +33,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/businesses", businessRoutes);
 
 app.all("/{*path}", (req, res, next) => {
   res.status(404).json({
