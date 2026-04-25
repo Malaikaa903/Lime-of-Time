@@ -126,14 +126,15 @@ const serviceSchema = new mongoose.Schema(
 serviceSchema.index({ name: "text", description: "text" });
 
 serviceSchema.virtual("finalPrice").get(function () {
-  if (
-    this.discount &&
-    this.discount.isActive &&
-    new Date() >= this.discount.startDate &&
-    new Date() <= this.discount.endDate
-  ) {
-    const discountAmount = (this.price * this.discount.percentage) / 100;
-    return Math.round((this.price - discountAmount) * 100) / 100;
+  if (this.discount && this.discount.isActive) {
+    const now = new Date();
+    const start = new Date(this.discount.startDate);
+    const end = new Date(this.discount.endDate);
+
+    if (now >= start && now <= end) {
+      const discountAmount = (this.price * this.discount.percentage) / 100;
+      return Math.round((this.price - discountAmount) * 100) / 100;
+    }
   }
   return this.price;
 });
