@@ -119,6 +119,14 @@ const businessSchema = new mongoose.Schema(
         type: Boolean,
         default: false,
       },
+      salesTaxRate: {
+        type: Number,
+        default: 7,
+      },
+      vatRate: {
+        type: Number,
+        default: 17,
+      },
     },
 
     rating: {

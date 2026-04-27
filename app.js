@@ -7,6 +7,7 @@ const userRoutes = require("./routes/userRoutes");
 const businessRoutes = require("./routes/businessRoutes");
 const staffRoutes = require("./routes/staffRoutes");
 const serviceRoutes = require("./routes/serviceRoutes");
+const appointmentRoutes = require("./routes/appointmentRoutes");
 
 const globalErrorHandler = require("./utils/globalErrorHandler");
 
@@ -25,7 +26,7 @@ app.get("/", (req, res) => {
 });
 
 // ROUTES
-// app.use("/api/appointments", appointmentRoutes);
+
 // app.use("/api/reviews", reviewRoutes);
 // app.use("/api/transactions", transactionRoutes);
 // app.use("/api/subscriptions", subscriptionRoutes);
@@ -37,6 +38,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/businesses", businessRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/api/services", serviceRoutes);
+app.use("/api/appointments", appointmentRoutes);
 
 app.all("/{*path}", (req, res, next) => {
   res.status(404).json({

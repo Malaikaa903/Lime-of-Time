@@ -151,6 +151,8 @@ exports.setupStep4 = catchAsync(async (req, res, next) => {
     acceptsFullPayment,
     acceptsPartialPayment,
     acceptsCash,
+    salesTaxRate,
+    vatRate,
   } = req.body;
 
   if (!bankName || !accountTitle || !accountNumber) {
@@ -175,6 +177,8 @@ exports.setupStep4 = catchAsync(async (req, res, next) => {
       acceptsFullPayment !== undefined ? acceptsFullPayment : true,
     acceptsPartialPayment: acceptsPartialPayment || false,
     acceptsCash: acceptsCash || false,
+    salesTaxRate: salesTaxRate !== undefined ? Number(salesTaxRate) : 7,
+    vatRate: vatRate !== undefined ? Number(vatRate) : 17,
   };
 
   business.setupStep = 5;
@@ -183,7 +187,6 @@ exports.setupStep4 = catchAsync(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Step 4 completed! Payment account connected.",
-    currentStep: 4,
     data: { business },
   });
 });
