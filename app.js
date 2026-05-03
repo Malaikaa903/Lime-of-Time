@@ -12,6 +12,8 @@ const reviewRoutes = require("./routes/reviewRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const loyaltyRoutes = require("./routes/loyaltyRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 
 const globalErrorHandler = require("./utils/globalErrorHandler");
 
@@ -30,10 +32,6 @@ app.get("/", (req, res) => {
 });
 
 // ROUTES
-
-// app.use("/api/chat", chatRoutes);
-// app.use("/api/notifications", notificationRoutes);
-
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/businesses", businessRoutes);
@@ -44,6 +42,8 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/loyalty", loyaltyRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/chat", chatRoutes);
 
 app.all("/{*path}", (req, res, next) => {
   res.status(404).json({
