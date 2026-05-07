@@ -2,6 +2,7 @@ const Service = require("../models/serviceModel");
 const Business = require("../models/businessModel");
 const Staff = require("../models/staffModel");
 const Appointment = require("../models/appointmentModel");
+const { getOwnerLimits } = require("./ownerSubscriptionController");
 const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
 
@@ -63,6 +64,24 @@ exports.createService = catchAsync(async (req, res, next) => {
     if (req.files["categoryCoverImage"]) {
       categoryCoverImage = req.files["categoryCoverImage"][0].filename;
     }
+  }
+
+  // check plan limits
+  const { limits, subscription } = await getOwnerLimits(req.user.id);
+
+  const currentServiceCount = await Service.countDocuments({
+    business: business._id,
+    isActive: true,
+  });
+
+  if (currentServiceCount >= limits.maxServices) {
+    return next(
+      new AppError(
+        `Your ${subscription.plan} plan allows maximum ${limits.maxServices} services. ` +
+          `You currently have ${currentServiceCount}. Please upgrade to Premium plan to add more!`,
+        403,
+      ),
+    );
   }
 
   const service = await Service.create({

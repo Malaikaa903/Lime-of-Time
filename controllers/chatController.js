@@ -192,10 +192,21 @@ exports.sendMessage = catchAsync(async (req, res, next) => {
 
   // real time chat (socket.io)
   if (req.io) {
+    //get sender's socketId
+    const senderSocketId = req.onlineUsers?.get(req.user.id);
+
     req.io.to(`conversation_${conversationId}`).emit("new_message", {
       message: populatedMessage,
       conversationId,
     });
+
+    // send message-sent confirmation to sender
+    if (senderSocketId) {
+      req.io.to(senderSocketId).emit("message_sent", {
+        message: populatedMessage,
+        conversationId,
+      });
+    }
 
     // also emit conversation update
     req.io.to(`conversation_${conversationId}`).emit("conversation_updated", {

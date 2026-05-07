@@ -2,6 +2,7 @@ const Staff = require("../models/staffModel");
 const Business = require("../models/businessModel");
 const Service = require("../models/serviceModel");
 const Appointment = require("../models/appointmentModel");
+const { getOwnerLimits } = require("./ownerSubscriptionController");
 const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
 
@@ -45,6 +46,25 @@ exports.addStaff = catchAsync(async (req, res, next) => {
       workPhotos = req.files["workPhotos"].map((f) => f.filename);
     }
   }
+
+  // check plan limits
+  const { limits, subscription } = await getOwnerLimits(req.user.id);
+
+  const currentStaffCount = await Staff.countDocuments({
+    business: business._id,
+    isActive: true,
+  });
+
+  if (currentStaffCount >= limits.maxStaff) {
+    return next(
+      new AppError(
+        `Your ${subscription.plan} plan allows maximum ${limits.maxStaff} staff members. ` +
+          `You currently have ${currentStaffCount}. Please upgrade to Premium plan to add more!`,
+        403,
+      ),
+    );
+  }
+
   const staff = await Staff.create({
     business: business._id,
     name,

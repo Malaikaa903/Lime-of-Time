@@ -1,6 +1,7 @@
 const Appointment = require("../models/appointmentModel");
 const Service = require("../models/serviceModel");
 const User = require("../models/userModel");
+const Review = require("../models/reviewModel");
 const Business = require("../models/businessModel");
 const Staff = require("../models/staffModel");
 const Transaction = require("../models/transactionModel");
@@ -854,6 +855,13 @@ exports.getClientDetail = catchAsync(async (req, res, next) => {
       client: req.params.clientId,
       business: business._id,
     }).sort("-createdAt");
+  } else if (tab === "reviews") {
+    tabData.reviews = await Review.find({
+      client: req.params.clientId,
+      business: business._id,
+    })
+      .populate("service", "name")
+      .sort("-createdAt");
   } else if (tab === "preferences") {
     const preferredService = await Appointment.aggregate([
       {
