@@ -47,7 +47,15 @@ const calculateBookingPrice = (service, selectedAddOns = [], business) => {
 
 // booking summary
 exports.getBookingSummary = catchAsync(async (req, res, next) => {
-  const { serviceId, selectedAddOns = [] } = req.body;
+  const { serviceId } = req.query;
+  let selectedAddOns = [];
+  if (req.query.addOns) {
+    try {
+      selectedAddOns = JSON.parse(req.query.addOns);
+    } catch (e) {
+      selectedAddOns = [];
+    }
+  }
 
   if (!serviceId) {
     return next(new AppError("Please provide service ID", 400));

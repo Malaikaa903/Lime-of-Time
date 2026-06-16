@@ -73,7 +73,14 @@ const appointmentSchema = new mongoose.Schema(
 
     paymentMethod: {
       type: String,
-      enum: ["google_pay", "apple_pay", "paypal", "credit_card", "cash"],
+      enum: [
+        "google_pay",
+        "apple_pay",
+        "paypal",
+        "credit_card",
+        "cash",
+        "card",
+      ],
       default: null,
     },
 

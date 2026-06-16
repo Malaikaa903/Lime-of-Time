@@ -69,7 +69,7 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["client", "business_owner"],
+      enum: ["client", "business_owner", "admin"],
       required: [true, "Please select account type"],
     },
 

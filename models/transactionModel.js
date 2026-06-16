@@ -27,12 +27,19 @@ const transactionSchema = new mongoose.Schema(
 
     paymentMethod: {
       type: String,
-      enum: ["google_pay", "apple_pay", "paypal", "credit_card", "cash"],
+      enum: [
+        "google_pay",
+        "apple_pay",
+        "paypal",
+        "credit_card",
+        "cash",
+        "card",
+      ],
     },
 
     status: {
       type: String,
-      enum: ["success", "failed", "refunded"],
+      enum: ["success", "failed", "refunded", "pending"],
       default: "success",
     },
     receiptData: {
@@ -42,6 +49,10 @@ const transactionSchema = new mongoose.Schema(
       serviceName: String,
       bookingDate: Date,
       bookingTime: String,
+    },
+    stripePaymentIntentId: {
+      type: String,
+      default: null,
     },
   },
   { timestamps: true },

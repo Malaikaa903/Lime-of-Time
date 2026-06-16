@@ -6,7 +6,7 @@ const authController = require("../controllers/authController");
 
 router.use(authController.protect);
 
-router.post(
+router.get(
   "/summary",
   authController.restrictTo("client"),
   appointmentController.getBookingSummary,

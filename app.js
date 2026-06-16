@@ -17,6 +17,8 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const ownerSubscriptionRoutes = require("./routes/ownerSubscriptionRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
+const adminRoutes = require("./routes/adminRoutes");
+const paymentRoute = require("./routes/paymentRoutes");
 
 const app = express();
 
@@ -55,6 +57,8 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/owner-subscription", ownerSubscriptionRoutes);
 app.use("/api/feedback", feedbackRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/payments", paymentRoute);
 
 app.all("/{*path}", (req, res, next) => {
   res.status(404).json({

@@ -47,6 +47,11 @@ exports.uploadServiceImages = multer({
   { name: "categoryCoverImage", maxCount: 1 },
 ]);
 
+exports.uploadCategoryImage = multer({
+  storage: createStorage("categories"),
+  fileFilter: multerFilter,
+}).single("image");
+
 exports.uploadStaffPhotos = multer({
   storage: createStorage("staff"),
   fileFilter: multerFilter,

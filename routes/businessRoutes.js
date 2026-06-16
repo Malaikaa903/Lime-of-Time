@@ -19,13 +19,12 @@ router.use(authController.protect);
 
 router.use(authController.restrictTo("business_owner"));
 
-// Setup steps
-router.post("/setup/step1", uploadBusinessPhoto, businessController.setupStep1);
-router.post("/setup/step2", businessController.setupStep2);
-router.post("/setup/step3", businessController.setupStep3);
-router.post("/setup/step4", businessController.setupStep4);
-router.post("/setup/step5", businessController.setupStep5);
-router.post("/setup/step6", businessController.setupStep6);
+// profile creation
+router.post(
+  "/setup",
+  uploadBusinessPhoto,
+  businessController.createBusinessProfile,
+);
 
 // Business management
 router.get("/owner/my-business", businessController.getMyBusiness);
@@ -34,7 +33,7 @@ router.patch(
   uploadBusinessPhoto,
   businessController.updateMyBusiness,
 );
-router.patch("/owner/working-hours", businessController.updateWorkingHours);
+
 router.patch("/owner/toggle-status", businessController.toggleBusinessStatus);
 
 // Owner Dashboard

@@ -2,6 +2,8 @@ const Business = require("../models/businessModel");
 const User = require("../models/userModel");
 const Appointment = require("../models/appointmentModel");
 const Review = require("../models/reviewModel");
+const Service = require("../models/serviceModel");
+const Category = require("../models/categoryModel");
 const SubscriptionPlan = require("../models/subscriptionPlanModel");
 const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
@@ -31,118 +33,172 @@ const getEarnings = async (businessId, startDate, endDate = null) => {
 };
 
 // Owner Profile Creation
-// step1 (business profile)
-exports.setupStep1 = catchAsync(async (req, res, next) => {
-  const { businessName, category, description, phone, email, website } =
-    req.body;
+exports.createBusinessProfile = catchAsync(async (req, res, next) => {
+  const {
+    businessName,
+    category,
+    description,
+    phone,
+    email,
+    website,
+    address,
+    coordinates,
+    workingHours,
+    bankName,
+    accountTitle,
+    accountNumber,
+    iban,
+    branchName,
+    acceptsFullPayment,
+    acceptsPartialPayment,
+    acceptsCash,
+    salesTaxRate,
+    vatRate,
+    subscriptionPlan,
+    firstService,
+  } = req.body;
+
+  // required fields only
   if (!businessName || !category || !description) {
     return next(
+      new AppError("Business name, category and description are required", 400),
+    );
+  }
+
+  // check if already exists
+  const existingBusiness = await Business.findOne({ owner: req.user.id });
+  if (existingBusiness) {
+    return next(
       new AppError(
-        "Please provide business name, category and description",
+        "Business profile already exists. Use update endpoint.",
         400,
       ),
     );
   }
 
-  let business = await Business.findOne({ owner: req.user.id });
-
-  if (business) {
-    business.businessName = businessName;
-    business.category = category;
-    business.description = description;
-    if (phone) business.phone = phone;
-    if (email) business.email = email;
-    if (website) business.website = website;
-    if (req.file) business.profilePhoto = req.file.filename;
-    business.setupStep = 2;
-    await business.save();
-  } else {
-    business = await Business.create({
-      owner: req.user.id,
-      businessName,
-      category,
-      description,
-      phone,
-      email,
-      website,
-      profilePhoto: req.file ? req.file.filename : null,
-      setupStep: 2,
-    });
-  }
-
-  await User.findByIdAndUpdate(req.user.id, { profileCompleted: true });
-
-  res.status(200).json({
-    success: true,
-    status: 200,
-    message: "Step 1 completed! Business Profile created.",
-    data: { business },
-  });
-});
-
-//step2 (custom category)
-exports.setupStep2 = catchAsync(async (req, res, next) => {
-  const { customCategory } = req.body;
-
-  if (!customCategory) {
-    return next(new AppError("Please provide a category name", 400));
-  }
-
-  const business = await Business.findOne({ owner: req.user.id });
-
-  if (!business) {
-    return next(new AppError("Please complete step 1 first.", 400));
-  }
-  business.category = customCategory;
-  business.setupStep = 3;
-  await business.save();
-
-  res.status(200).json({
-    success: true,
-    status: 200,
-    message: "Step 2 completed! Custom Category Saved.",
-    data: { business },
-  });
-});
-
-//step 3 (location + working hour)
-exports.setupStep3 = catchAsync(async (req, res, next) => {
-  const { address, coordinates, workingHours } = req.body;
-
-  if (!address) {
-    return next(new AppError("Please provide business address", 400));
-  }
-
-  const business = await Business.findOne({ owner: req.user.id });
-
-  if (!business) {
-    return next(new AppError("Please complete step 1 first.", 400));
-  }
-
-  business.location = {
-    type: "Point",
-    address: address,
-    coordinates: coordinates || [0, 0],
+  // build business object
+  const businessData = {
+    owner: req.user.id,
+    businessName,
+    category,
+    description,
+    phone: phone || null,
+    email: email || null,
+    website: website || null,
+    profilePhoto: req.file ? req.file.filename : null,
+    setupComplete: true,
+    setupStep: 6,
   };
 
-  if (workingHours && workingHours.length > 0) {
-    business.workingHours = workingHours;
+  // location
+  if (address) {
+    businessData.location = {
+      type: "Point",
+      address,
+      coordinates: coordinates
+        ? typeof coordinates === "string"
+          ? JSON.parse(coordinates)
+          : coordinates
+        : [0, 0],
+    };
   }
 
-  business.setupStep = 4;
-  await business.save();
+  // working hours
+  if (workingHours) {
+    businessData.workingHours =
+      typeof workingHours === "string"
+        ? JSON.parse(workingHours)
+        : workingHours;
+  }
 
-  res.status(200).json({
+  // payment account
+  if (bankName && accountTitle && accountNumber) {
+    businessData.paymentAccount = {
+      bankName,
+      accountTitle,
+      accountNumber,
+      iban: iban || null,
+      branchName: branchName || null,
+      acceptsFullPayment:
+        acceptsFullPayment !== undefined ? acceptsFullPayment : true,
+      acceptsPartialPayment: acceptsPartialPayment || false,
+      acceptsCash: acceptsCash || false,
+      salesTaxRate: salesTaxRate !== undefined ? Number(salesTaxRate) : 7,
+      vatRate: vatRate !== undefined ? Number(vatRate) : 17,
+    };
+  }
+
+  // create business
+  const business = await Business.create(businessData);
+
+  // mark user profile complete
+  await User.findByIdAndUpdate(req.user.id, { profileCompleted: true });
+
+  // create subscription plan if provided
+  let createdPlan = null;
+  if (subscriptionPlan) {
+    const planData =
+      typeof subscriptionPlan === "string"
+        ? JSON.parse(subscriptionPlan)
+        : subscriptionPlan;
+
+    if (planData.planName && planData.timePeriod && planData.amount) {
+      createdPlan = await SubscriptionPlan.create({
+        business: business._id,
+        planName: planData.planName,
+        timePeriod: planData.timePeriod,
+        amount: planData.amount,
+        facilities: planData.facilities || "",
+      });
+    }
+  }
+
+  // create first service
+  let createdService = null;
+  if (firstService) {
+    const serviceData =
+      typeof firstService === "string"
+        ? JSON.parse(firstService)
+        : firstService;
+
+    if (serviceData.name && serviceData.price && serviceData.duration) {
+      createdService = await Service.create({
+        business: business._id,
+        name: serviceData.name,
+        description: serviceData.description || "",
+        category: serviceData.category || category,
+        price: Number(serviceData.price),
+        duration: Number(serviceData.duration),
+        breakTime: serviceData.breakTime ? Number(serviceData.breakTime) : 0,
+        addOns: serviceData.addOns || [],
+      });
+    }
+  }
+
+  res.status(201).json({
     success: true,
-    status: 200,
-    message: "Step 3 completed! Location and working hours are saved.",
-    data: { business },
+    status: 201,
+    message: "Business profile created successfully! ",
+    data: {
+      business,
+      subscriptionPlan: createdPlan,
+      firstService: createdService,
+    },
   });
 });
 
-//step 4 (connect payment account)
-exports.setupStep4 = catchAsync(async (req, res, next) => {
+// update business (owner)
+exports.updateMyBusiness = catchAsync(async (req, res, next) => {
   const {
+    businessName,
+    category,
+    description,
+    phone,
+    email,
+    website,
+    address,
+    coordinates,
+    workingHours,
     bankName,
     accountTitle,
     accountNumber,
@@ -155,91 +211,80 @@ exports.setupStep4 = catchAsync(async (req, res, next) => {
     vatRate,
   } = req.body;
 
-  if (!bankName || !accountTitle || !accountNumber) {
-    return next(
-      new AppError("Bank name, account title and number required", 400),
-    );
-  }
-
   const business = await Business.findOne({ owner: req.user.id });
 
   if (!business) {
-    return next(new AppError("Please complete step 1 first", 400));
+    return next(new AppError("Business not found", 404));
   }
 
-  business.paymentAccount = {
-    bankName,
-    accountTitle,
-    accountNumber,
-    iban,
-    branchName,
-    acceptsFullPayment:
-      acceptsFullPayment !== undefined ? acceptsFullPayment : true,
-    acceptsPartialPayment: acceptsPartialPayment || false,
-    acceptsCash: acceptsCash || false,
-    salesTaxRate: salesTaxRate !== undefined ? Number(salesTaxRate) : 7,
-    vatRate: vatRate !== undefined ? Number(vatRate) : 17,
-  };
+  // update only fields that were sent
+  if (businessName) business.businessName = businessName;
+  if (category) business.category = category;
+  if (description) business.description = description;
+  if (phone) business.phone = phone;
+  if (email) business.email = email;
+  if (website) business.website = website;
+  if (req.file) business.profilePhoto = req.file.filename;
 
-  business.setupStep = 5;
-  await business.save();
-
-  res.status(200).json({
-    success: true,
-    message: "Step 4 completed! Payment account connected.",
-    data: { business },
-  });
-});
-
-//step 5 (subscription plan)
-exports.setupStep5 = catchAsync(async (req, res, next) => {
-  const { planName, timePeriod, amount, facilities } = req.body;
-
-  if (!planName || !timePeriod || !amount) {
-    return next(
-      new AppError("Plan name, time period and amount are required", 400),
-    );
+  // update location
+  if (address) {
+    business.location = {
+      type: "Point",
+      address,
+      coordinates: coordinates
+        ? typeof coordinates === "string"
+          ? JSON.parse(coordinates)
+          : coordinates
+        : business.location?.coordinates || [0, 0],
+    };
   }
 
-  const business = await Business.findOne({ owner: req.user.id });
-
-  if (!business) {
-    return next(new AppError("Please complete step 1 first", 400));
-  }
-  await SubscriptionPlan.create({
-    business: business._id,
-    planName,
-    timePeriod,
-    amount,
-    facilities,
-  });
-
-  business.setupStep = 6;
-  await business.save();
-
-  res.status(200).json({
-    success: true,
-    message: "Step 5 completed! Subscription plan created.",
-    data: { business },
-  });
-});
-
-//step 6 (Completion of profile creation)
-exports.setupStep6 = catchAsync(async (req, res, next) => {
-  const business = await Business.findOne({ owner: req.user.id });
-
-  if (!business) {
-    return next(new AppError("Business profile not found", 404));
+  // update working hours
+  if (workingHours) {
+    business.workingHours =
+      typeof workingHours === "string"
+        ? JSON.parse(workingHours)
+        : workingHours;
   }
 
-  business.setupComplete = true;
-  business.setupStep = 6;
+  // update payment account
+  if (bankName || accountTitle || accountNumber) {
+    business.paymentAccount = {
+      ...business.paymentAccount?.toObject(),
+      bankName: bankName || business.paymentAccount?.bankName,
+      accountTitle: accountTitle || business.paymentAccount?.accountTitle,
+      accountNumber: accountNumber || business.paymentAccount?.accountNumber,
+      iban: iban || business.paymentAccount?.iban,
+      branchName: branchName || business.paymentAccount?.branchName,
+      acceptsFullPayment:
+        acceptsFullPayment !== undefined
+          ? acceptsFullPayment
+          : business.paymentAccount?.acceptsFullPayment,
+      acceptsPartialPayment:
+        acceptsPartialPayment !== undefined
+          ? acceptsPartialPayment
+          : business.paymentAccount?.acceptsPartialPayment,
+      acceptsCash:
+        acceptsCash !== undefined
+          ? acceptsCash
+          : business.paymentAccount?.acceptsCash,
+      salesTaxRate:
+        salesTaxRate !== undefined
+          ? Number(salesTaxRate)
+          : business.paymentAccount?.salesTaxRate || 7,
+      vatRate:
+        vatRate !== undefined
+          ? Number(vatRate)
+          : business.paymentAccount?.vatRate || 17,
+    };
+  }
+
   await business.save();
 
   res.status(200).json({
     success: true,
     status: 200,
-    message: "Setup complete! Welcome to your dashboard.",
+    message: "Business updated successfully",
     data: { business },
   });
 });
@@ -256,72 +301,6 @@ exports.getMyBusiness = catchAsync(async (req, res, next) => {
     success: true,
     status: 200,
     data: { business },
-  });
-});
-
-// update business (owner)
-exports.updateMyBusiness = catchAsync(async (req, res, next) => {
-  const {
-    businessName,
-    category,
-    description,
-    phone,
-    email,
-    website,
-    address,
-  } = req.body;
-
-  const updateData = {};
-  if (businessName) updateData.businessName = businessName;
-  if (category) updateData.category = category;
-  if (description) updateData.description = description;
-  if (phone) updateData.phone = phone;
-  if (email) updateData.email = email;
-  if (website) updateData.website = website;
-  if (address) updateData["location.address"] = address;
-  if (req.file) updateData.profilePhoto = req.file.filename;
-
-  const business = await Business.findOneAndUpdate(
-    { owner: req.user.id },
-    updateData,
-    { new: true, runValidators: true },
-  );
-
-  if (!business) {
-    return next(new AppError("Business not found", 404));
-  }
-
-  res.status(200).json({
-    success: true,
-    status: 200,
-    message: "Business updated successfully",
-    data: { business },
-  });
-});
-
-//update working hours
-exports.updateWorkingHours = catchAsync(async (req, res, next) => {
-  const { workingHours } = req.body;
-
-  if (!workingHours || workingHours.length === 0) {
-    return next(new AppError("Please provide working hours", 400));
-  }
-
-  const business = await Business.findOneAndUpdate(
-    { owner: req.user.id },
-    { workingHours },
-    { new: true },
-  );
-
-  if (!business) {
-    return next(new AppError("Business not found", 404));
-  }
-
-  res.status(200).json({
-    success: true,
-    status: 200,
-    message: "Working hours updated successfully",
-    data: { workingHours: business.workingHours },
   });
 });
 
@@ -444,10 +423,9 @@ exports.getNearbyBusinesses = catchAsync(async (req, res, next) => {
 
 //client home screen (categories, special offers, recommendations)
 exports.getHomeData = catchAsync(async (req, res, next) => {
-  const categories = await Business.distinct("category", {
+  const categories = await Category.find({
     isActive: true,
-    setupComplete: true,
-  });
+  }).sort("name");
 
   // Special offers = pinned businesses
   const specialOffers = await Business.find({
@@ -663,7 +641,7 @@ exports.getBusinessStatistics = catchAsync(async (req, res, next) => {
   ]);
 
   // Total clients
-  const totalClients = getUniqueClientsCount(business._id, startDate);
+  const totalClients = await getUniqueClientsCount(business._id, startDate);
 
   res.status(200).json({
     success: true,

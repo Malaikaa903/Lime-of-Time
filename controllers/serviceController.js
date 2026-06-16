@@ -429,15 +429,15 @@ exports.getAvailableSlots = catchAsync(async (req, res, next) => {
     });
   }
 
-  // generate all slots between open and close time
-  // service duration + break time = total time per slot
+  // generate all slots from BUSINESS working hours
   const slotDuration = service.duration + service.breakTime;
-
-  const slots = generateTimeSlots(
+  const businessSlots = generateTimeSlots(
     daySchedule.openTime,
     daySchedule.closeTime,
     slotDuration,
   );
+
+  const businessSlotsSet = new Set(businessSlots);
 
   // get already booked slots for this date
   const bookedAppointments = await Appointment.find({
@@ -451,36 +451,52 @@ exports.getAvailableSlots = catchAsync(async (req, res, next) => {
 
   const bookedSlots = bookedAppointments.map((a) => a.timeSlot);
 
-  // check availability of specific staff
-  let staffBusySlots = [];
+  let availableSlots;
+
   if (staffId) {
     const staff = await Staff.findById(staffId);
 
-    if (staff) {
-      // get staff availability for this day
-      const staffDayAvail = staff.availability.find((a) => a.day === dayName);
-
-      if (staffDayAvail) {
-        // get appointments where this staff is already booked
-        const staffAppointments = await Appointment.find({
-          staff: staffId,
-          date: {
-            $gte: new Date(date),
-            $lt: new Date(new Date(date).getTime() + 24 * 60 * 60 * 1000),
-          },
-          status: { $in: ["pending", "confirmed"] },
-        });
-
-        staffBusySlots = staffAppointments.map((a) => a.timeSlot);
-      }
+    if (!staff || !staff.isActive) {
+      return next(new AppError("Staff not found", 404));
     }
+
+    // get staff availability for this day
+    const staffDayAvail = staff.availability.find((a) => a.day === dayName);
+
+    if (!staffDayAvail || staffDayAvail.slots.length === 0) {
+      return res.status(200).json({
+        success: true,
+        status: 200,
+        message: "Selected staff is not available on this day",
+        data: { availableSlots: [] },
+      });
+    }
+
+    // Only keep staff slots that exist in business slots
+    const validStaffSlots = staffDayAvail.slots.filter((slot) =>
+      businessSlotsSet.has(slot),
+    );
+
+    // get this staff's already booked appointments
+    const staffAppointments = await Appointment.find({
+      staff: staffId,
+      date: {
+        $gte: new Date(date),
+        $lt: new Date(new Date(date).getTime() + 24 * 60 * 60 * 1000),
+      },
+      status: { $in: ["pending", "confirmed"] },
+    });
+
+    const staffBusySlots = staffAppointments.map((a) => a.timeSlot);
+
+    // available = valid staff slots - booked - staff busy
+    const allBusySlots = new Set([...bookedSlots, ...staffBusySlots]);
+    availableSlots = validStaffSlots.filter((slot) => !allBusySlots.has(slot));
+  } else {
+    // no staff selected → business slots - booked slots
+    const bookedSlotsSet = new Set(bookedSlots);
+    availableSlots = businessSlots.filter((slot) => !bookedSlotsSet.has(slot));
   }
-
-  // combine all busy slots
-  const allBusySlots = [...new Set([...bookedSlots, ...staffBusySlots])];
-
-  // available slots
-  const availableSlots = slots.filter((slot) => !allBusySlots.includes(slot));
 
   res.status(200).json({
     success: true,
@@ -488,7 +504,12 @@ exports.getAvailableSlots = catchAsync(async (req, res, next) => {
     data: {
       date,
       dayName,
+      businessHours: {
+        open: daySchedule.openTime,
+        close: daySchedule.closeTime,
+      },
       serviceDuration: service.duration,
+      breakTime: service.breakTime,
       availableSlots,
     },
   });
