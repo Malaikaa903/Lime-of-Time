@@ -437,12 +437,12 @@ After running seed data, use these accounts:
 
 ### 💳 Payments (Stripe)
 
-| Method | Endpoint                                | Description           |
-| ------ | --------------------------------------- | --------------------- |
-| POST   | `/api/payments/create-intent`           | Create payment intent |
-| POST   | `/api/payments/confirm`                 | Confirm payment       |
-| POST   | `/api/payments/refund`                  | Refund payment        |
-| GET    | `/api/payments/status/:paymentIntentId` | Check payment status  |
+| Method | Endpoint                                        | Description           |
+| ------ | ----------------------------------------------- | --------------------- |
+| POST   | `/api/payments/create-payment-intent`           | Create payment intent |
+| POST   | `/api/payments/confirm-payment`                 | Confirm payment       |
+| POST   | `/api/payments/refund-payment`                  | Refund payment        |
+| GET    | `/api/payments/payment-status/:paymentIntentId` | Check payment status  |
 
 ### 💰 Transactions
 
