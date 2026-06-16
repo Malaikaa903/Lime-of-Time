@@ -96,147 +96,76 @@ A comprehensive **two-sided service booking platform** backend built with Node.j
 ```
 lime-of-time-backend/
 ├── controllers/
-
 │   ├── authController.js
-
 │   ├── userController.js
-
 │   ├── businessController.js
-
 │   ├── staffController.js
-
 │   ├── serviceController.js
-
 │   ├── appointmentController.js
-
 │   ├── reviewController.js
-
 │   ├── transactionController.js
-
 │   ├── subscriptionController.js
-
 │   ├── ownerSubscriptionController.js
-
 │   ├── loyaltyController.js
-
 │   ├── chatController.js
-
 │   ├── notificationController.js
-
 │   ├── adminController.js
-
 │   ├── feedbackController.js
-
 │   └── paymentController.js
-
 ├── models/
-
 │   ├── userModel.js
-
 │   ├── businessModel.js
-
 │   ├── staffModel.js
-
 │   ├── serviceModel.js
-
 │   ├── appointmentModel.js
-
 │   ├── reviewModel.js
-
 │   ├── transactionModel.js
-
 │   ├── subscriptionPlanModel.js
-
 │   ├── clientSubscriptionModel.js
-
 │   ├── ownerSubscriptionModel.js
-
 │   ├── loyaltyProgramModel.js
-
 │   ├── loyaltyPointsModel.js
-
 │   ├── conversationModel.js
-
 │   ├── messageModel.js
-
 │   ├── notificationModel.js
-
 │   ├── categoryModel.js
-
 │   └── feedbackModel.js
-
 ├── routes/
-
 │   ├── authRoutes.js
-
 │   ├── userRoutes.js
-
 │   ├── businessRoutes.js
-
 │   ├── staffRoutes.js
-
 │   ├── serviceRoutes.js
-
 │   ├── appointmentRoutes.js
-
 │   ├── reviewRoutes.js
-
 │   ├── transactionRoutes.js
-
 │   ├── subscriptionRoutes.js
-
 │   ├── ownerSubscriptionRoutes.js
-
 │   ├── loyaltyRoutes.js
-
 │   ├── chatRoutes.js
-
 │   ├── notificationRoutes.js
-
 │   ├── adminRoutes.js
-
 │   ├── feedbackRoutes.js
-
 │   └── paymentRoutes.js
-
 ├── utils/
-
 │   ├── appError.js
-
 │   ├── catchAsync.js
-
 │   ├── globalErrorHandler.js
-
 │   ├── db.js
-
 │   ├── email.js
-
 │   ├── otpGenerate.js
-
 │   └── upload.js
-
 ├── dev-data/
-
 │   └── seeder.js
-
 ├── public/
-
 │   └── img/
-
 │       ├── users/
-
 │       ├── businesses/
-
 │       ├── services/
-
 │       ├── staff/
-
 │       └── categories/
-
 ├── app.js
-
 ├── server.js
-
 └── config.env
 
 ```
@@ -257,7 +186,7 @@ lime-of-time-backend/
 **1. Clone the repository**
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/lime-of-time-backend.git
+git clone https://github.com/Malaikaa903/Lime-of-Time
 cd lime-of-time-backend
 ```
 
@@ -321,14 +250,14 @@ Server runs at: `http://localhost:5000`
 
 After running seed data, use these accounts:
 
-| Role           | Email                 | Password |
-| -------------- | --------------------- | -------- |
-| Client         | hassan@test.com       | test1234 |
-| Client         | sophia@test.com       | test1234 |
-| Client         | ali@test.com          | test1234 |
-| Business Owner | owner1@test.com       | test1234 |
-| Business Owner | owner2@test.com       | test1234 |
-| Admin          | admin@limeofttime.com | test1234 |
+| Role           | Email                | Password |
+| -------------- | -------------------- | -------- |
+| Client         | hassan@test.com      | test1234 |
+| Client         | sophia@test.com      | test1234 |
+| Client         | ali@test.com         | test1234 |
+| Business Owner | owner1@test.com      | test1234 |
+| Business Owner | owner2@test.com      | test1234 |
+| Admin          | admin@limeoftime.com | test1234 |
 
 ---
 
